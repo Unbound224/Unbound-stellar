@@ -40,9 +40,12 @@ Start with:
 | Submit classification: CONFIRMED / FAILED(reason) / RECONCILING; reconcile by hash; expiry resolution | Implemented, tested |
 | Cursor indexer, dedup, replay, at-least-once delivery, versioned reconciliation event + JSON Schema | Implemented, tested |
 | Horizon adapters (`HorizonClient`) | Type-checked + mapping unit tests only. **Never run against Testnet** (no network route in the build sandbox) |
+| **Gateway service** (`src/service`): HTTP API for `unbound-core` (quote, settlement, redemption-return, submit, balances, trusted-assets sync), bearer-token auth, strict validation | Implemented; tested over real HTTP on `SimulatedLedger`; response shapes checked against fixtures shared with core |
+| **Chain worker** (`src/worker`): durable pending-hash set, hash watcher (CONFIRMED / FAILED / FAILED-expired), HTTP event sink to core with retry-by-not-advancing and a dead-letter file, backoff loop with metrics, optional cursor `Indexer` | Implemented; tested with a stub core over real HTTP and `SimulatedLedger` |
+| Entrypoints `npm run gateway` / `npm run worker` | Written; **never executed against Horizon** |
 | Real Testnet transaction hashes | **None yet.** Hashes printed by `scripts/m1-demo.ts` come from a local simulator |
-| Soroban / path payments via liquidity pools / partial offer crossing / reserves / liabilities | Not modeled |
-| Published npm package / chain worker process | Not done |
+| Account-stream indexing from Horizon (`forAccount` cursors), Soroban / liquidity pools / partial offer crossing / reserves / liabilities | Not done / not modeled |
+| Published npm package, Docker image, metrics endpoint | Not done |
 
 `SimulatedLedger` (`src/testing/`) is an in-memory TEST ADAPTER, clearly not Stellar. It verifies real
 XDR signatures/sequence/timebounds but implements only a subset of operations.
@@ -58,12 +61,15 @@ npm ci
 npm run check        # lint + typecheck + tests + build
 npx tsx scripts/m1-demo.ts   # offline demo on the simulator
 npm run schemas      # regenerate schemas/reconciliation-event.v1.json
+npm run gateway      # needs GATEWAY_TOKEN; talks to Horizon TESTNET (unverified)
+npm run worker       # needs CORE_URL + CORE_TOKEN (unverified)
 ```
 
 ## Public boundary
 - TypeScript API exported from `src/index.ts`.
 - `schemas/reconciliation-event.v1.json` (generated from zod, snapshot-tested) and
   `fixtures/reconciliation-event.confirmed.v1.json`: the contract consumed by `unbound-core`.
+- `fixtures/gateway/*.json`: the gateway service contract, byte-identical to `unbound-core`'s copy (checked by a cross-repo test there).
 - Quote object (`Quote`, schema version 1.0) matches the quote/intent shape in `docs/STELLAR_PROTOCOL.md`.
 
 ## Security notes
