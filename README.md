@@ -78,7 +78,7 @@ Testnet passphrase is accepted (every builder/adapter fails closed on any other 
 Fee sponsorship is not implemented and nothing here promises it.
 
 ## Sibling versions
-Developed against `unbound-core` / `unbound-site` / `unbound-mobile` at their `claude/drips-wave-maintainer-projects-iwucl5` branches (no tagged releases yet).
+Developed against `unbound-core` / `unbound-site` / `unbound-mobile` at their `main` branches (no tagged releases yet).
 
 ## Minimal integration contract
 Always test the dependency path stated in ARCHITECTURE.md. Every new public endpoint/ABI/package message must be versioned and covered by consumer fixtures. See `docs/SRD.md` and `docs/TECHNICAL_BUILD.md`.
