@@ -15,7 +15,9 @@
     "lint": "eslint .",
     "test": "vitest run",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build",
-    "schemas": "tsx scripts/generate-schemas.ts"
+    "schemas": "tsx scripts/generate-schemas.ts",
+    "gateway": "tsx src/bin/gateway.ts",
+    "worker": "tsx src/bin/worker.ts"
   },
   "dependencies": {
     "@stellar/stellar-sdk": "^17.4.0",
