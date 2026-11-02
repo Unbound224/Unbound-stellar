@@ -19,6 +19,17 @@ export class TrustedAssetRegistry {
     this.assets.add(assetKey(asset));
   }
 
+  /** Atomically replace the whole set (core is the authority). Validation failure leaves the old set intact. */
+  replaceAll(assets: AssetRef[]): void {
+    for (const a of assets) assertWellFormed(a);
+    this.assets.clear();
+    for (const a of assets) this.assets.add(assetKey(a));
+  }
+
+  size(): number {
+    return this.assets.size;
+  }
+
   remove(asset: AssetRef): void {
     this.assets.delete(assetKey(asset));
   }
