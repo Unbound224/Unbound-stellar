@@ -4,7 +4,7 @@
 
 > Unbound — Turn stranded value into something usable.
 
-**Status: repository scaffold / not implemented.** This repo is one of **exactly four meaningful independent codebases** in the Unbound Stellar-native project. It is not a placeholder created merely to increase Drips Wave submissions.
+**Status: M1 protocol slice implemented and tested offline; NOT yet verified against live Stellar Testnet. See "Status" below.** This repo is one of **exactly four meaningful independent codebases** in the Unbound Stellar-native project. It is not a placeholder created merely to increase Drips Wave submissions.
 
 ## Owns
 Native Stellar asset issuance integration, account trustlines, issuer flags, order-book/path quoting, transactions, indexing/reconciliation, typed integration SDK
@@ -28,8 +28,51 @@ Start with:
 - `docs/BRAND.md` — approved flat logo and flexible UI direction;
 - `docs/ROADMAP.md` — milestone acceptance gates.
 
-## Technical target
-TypeScript Stellar-native SDK + chain worker. The actual product implementation starts at milestone M0; no real-money transactions or claims exist in this scaffold.
+## Status (honest)
+| Capability | State |
+|---|---|
+| Amount math (integer base units, 7 dp, no floats) | Implemented, unit-tested |
+| Verified-issuer registry, fail-closed on untrusted/malformed assets | Implemented, unit-tested |
+| Issuer account/flag checks, trustline checks (missing / unauthorized / limit) | Implemented, tested on SimulatedLedger |
+| Unsigned tx builders: issuer setup, authorize trustline, issue credit, change trust, redemption return (burn) | Implemented, tested on SimulatedLedger |
+| Strict-send path quotes: expiry, slippage cap (<=10%), min-output floor, tamper-evident id, approved-route filter | Implemented, unit-tested |
+| Settlement tx builder re-validating quote freshness, balances, authorization, destination trustline | Implemented, tested |
+| Submit classification: CONFIRMED / FAILED(reason) / RECONCILING; reconcile by hash; expiry resolution | Implemented, tested |
+| Cursor indexer, dedup, replay, at-least-once delivery, versioned reconciliation event + JSON Schema | Implemented, tested |
+| Horizon adapters (`HorizonClient`) | Type-checked + mapping unit tests only. **Never run against Testnet** (no network route in the build sandbox) |
+| Real Testnet transaction hashes | **None yet.** Hashes printed by `scripts/m1-demo.ts` come from a local simulator |
+| Soroban / path payments via liquidity pools / partial offer crossing / reserves / liabilities | Not modeled |
+| Published npm package / chain worker process | Not done |
+
+`SimulatedLedger` (`src/testing/`) is an in-memory TEST ADAPTER, clearly not Stellar. It verifies real
+XDR signatures/sequence/timebounds but implements only a subset of operations.
+
+## What cannot work without Stellar
+Holding a transferable merchant credit as an issued asset, issuer-gated trustlines, and
+strict-send settlement against real order-book liquidity are ledger features. The simulator only
+rehearses their failure semantics; it proves nothing about real liquidity.
+
+## Quick start
+```
+npm ci
+npm run check        # lint + typecheck + tests + build
+npx tsx scripts/m1-demo.ts   # offline demo on the simulator
+npm run schemas      # regenerate schemas/reconciliation-event.v1.json
+```
+
+## Public boundary
+- TypeScript API exported from `src/index.ts`.
+- `schemas/reconciliation-event.v1.json` (generated from zod, snapshot-tested) and
+  `fixtures/reconciliation-event.confirmed.v1.json`: the contract consumed by `unbound-core`.
+- Quote object (`Quote`, schema version 1.0) matches the quote/intent shape in `docs/STELLAR_PROTOCOL.md`.
+
+## Security notes
+No secrets are committed; tests generate throwaway keys. `TestnetKeypairSigner` is test-only. Only the
+Testnet passphrase is accepted (every builder/adapter fails closed on any other network).
+Fee sponsorship is not implemented and nothing here promises it.
+
+## Sibling versions
+Developed against `unbound-core` / `unbound-site` / `unbound-mobile` at their `claude/drips-wave-maintainer-projects-iwucl5` branches (no tagged releases yet).
 
 ## Minimal integration contract
 Always test the dependency path stated in ARCHITECTURE.md. Every new public endpoint/ABI/package message must be versioned and covered by consumer fixtures. See `docs/SRD.md` and `docs/TECHNICAL_BUILD.md`.
