@@ -15,7 +15,10 @@ export type ErrorCode =
   | 'QUOTE_EXPIRED'
   | 'QUOTE_TAMPERED'
   | 'SIGNER_MISMATCH'
-  | 'MAINNET_REFUSED';
+  | 'MAINNET_REFUSED'
+  | 'ESCROW_INVALID'
+  | 'ESCROW_REJECTED'
+  | 'ESCROW_UNAVAILABLE';
 
 /** Typed, fail-closed error. Messages are safe to show to clients (no secrets). */
 export class UnboundStellarError extends Error {

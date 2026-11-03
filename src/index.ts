@@ -20,3 +20,4 @@ export * from './worker/pending-store.js';
 export * from './worker/sink.js';
 export * from './worker/watcher.js';
 export * from './worker/worker.js';
+export * from './soroban/escrow.js';
