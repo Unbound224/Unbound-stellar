@@ -31,3 +31,10 @@ jobs:
           name: unbound-redemption-escrow-wasm
           path: contracts/target/wasm32v1-none/release/unbound_redemption_escrow.wasm
           if-no-files-found: error
+  deploy-script:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash -n scripts/deploy-testnet.sh
+      - run: DRY_RUN=1 scripts/deploy-testnet.sh
+      - run: '! STELLAR_NETWORK=mainnet scripts/deploy-testnet.sh'
