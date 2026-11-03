@@ -4,7 +4,7 @@
 
 # Unbound-stellar
 
-**The Stellar-native layer of Unbound: trustline and issuer checks, strict-send path quotes, unsigned transaction builders, submission and ledger reconciliation.**
+**The Stellar-native layer of Unbound: trustline and issuer checks, strict-send path quotes, unsigned transaction builders, submission, ledger reconciliation, and the one Soroban contract (the redemption escrow).**
 
 [![CI](https://github.com/Unbound224/Unbound-stellar/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Unbound224/Unbound-stellar/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-7537F5.svg)](./LICENSE)
@@ -36,6 +36,12 @@ trustline authorization, issuance, redemption return), classifying submissions, 
 versioned reconciliation events for `Unbound-core`. It ships as a TypeScript SDK plus a gateway HTTP service and a
 chain worker. Only the Testnet passphrase is accepted.
 
+It also owns Unbound's only smart contract, [`contracts/redemption-escrow`](./contracts/redemption-escrow) (Rust,
+soroban-sdk 29.0.1): returned credit is held until the issuer confirms (released to the issuer), rejects (refunded),
+or the deadline passes (anyone can trigger the refund). Why this is the one place Soroban is used:
+[ADR 0002](./docs/adr/0002-soroban-redemption-escrow.md). The TypeScript side (`SorobanRedemptionEscrow`) builds
+unsigned, simulated invocations and decodes records and events, tested against golden XDR produced by the Rust tests.
+
 ## Architecture
 
 Unbound is four independently tested repositories with one owner per boundary. This one is highlighted.
@@ -46,11 +52,11 @@ flowchart LR
   S["Unbound-site<br/>landing + merchant console"]
   C["Unbound-core<br/>HTTP API v1, policy, intents, audit"]
   G["Unbound-stellar<br/>SDK, gateway service, chain worker"]
-  N[("Stellar Testnet<br/>assets, trustlines, DEX")]
+  N[("Stellar Testnet<br/>assets, trustlines, DEX,<br/>Soroban redemption escrow")]
   M -- "quotes, intents, signed XDR" --> C
   S -- "merchant auth, redemption queue" --> C
   C -- "quote / build / submit" --> G
-  G -- "Horizon" --> N
+  G -- "Horizon + Soroban RPC" --> N
   G -- "reconciliation events" --> C
   style G fill:#7537F5,stroke:#10092E,color:#ffffff
 ```
@@ -66,6 +72,12 @@ Requires Node 22+.
 npm ci
 npm run check                      # lint + typecheck + tests + build
 npx tsx scripts/m1-demo.ts         # offline demo: issue, quote, settle, and a refused no-trustline route
+
+# the Soroban contract (Rust stable + wasm32v1-none)
+cd contracts
+cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test
+SOROBAN_SDK_BUILD_SYSTEM_SUPPORTS_SPEC_SHAKING_V2=1 cargo build --release --target wasm32v1-none
+DRY_RUN=1 ../scripts/deploy-testnet.sh   # prints the stellar-cli deploy steps; never run for real yet
 ```
 
 The demo runs on `SimulatedLedger`, an in-memory **test adapter** that verifies real XDR signatures, sequence numbers
@@ -88,22 +100,27 @@ Legend: **Built** = implemented and covered by automated tests in this repo. **N
 | Gateway service for core (quote, settlement, redemption return, submit, balances) with bearer auth | Built, tested over HTTP on the simulator |
 | Chain worker (pending-hash watcher, event sink with retry and dead-letter file) | Built, tested with a stub core |
 | Horizon adapters (`HorizonClient`) | Type-checked and mapping-tested only; **never run against Testnet** |
-| Real Testnet transaction hashes, account-stream indexing, Soroban, liquidity pools, reserves/liabilities | Not yet |
-| Published npm package, Docker image, metrics endpoint, fee sponsorship | Not yet |
+| Soroban redemption escrow contract: open / confirm / reject / expire_refund, single-use ids, bounded deadlines, issuer = SAC admin, pause for new returns only, events | Built: 22 behaviour and failure-path tests, a seeded invariant test (escrow balance == locked == open returns) and a golden-fixture test; wasm builds in CI |
+| `SorobanRedemptionEscrow` adapter, gateway `/gateway/v1/escrow/*` endpoints, golden Rust -> TypeScript XDR fixtures | Built (on `FixtureSorobanRpc`); `StellarRpcSorobanPort` type-checked only |
+| `scripts/deploy-testnet.sh` (stellar-cli build, deploy, init, admin check, issuer `authorize`) | Written and dry-run in CI; **never run**: no Testnet contract id exists |
+| Real Testnet transaction hashes, account-stream indexing, escrow event indexing from RPC, liquidity pools, reserves/liabilities | Not yet |
+| Published npm package, Docker image, metrics endpoint, fee sponsorship, external audit of the contract | Not yet |
 
 ## Public boundary
 
 - TypeScript API exported from [`src/index.ts`](./src/index.ts).
 - [`schemas/reconciliation-event.v1.json`](./schemas) (generated from zod with `npm run schemas`, snapshot-tested) and
   `fixtures/reconciliation-event.confirmed.v1.json` - consumed by `Unbound-core`.
-- `fixtures/gateway/*.json` - gateway contract, byte-identical to core's copy; deterministic XDR fixtures for the mobile decoder.
+- `fixtures/gateway/*.json` - gateway contract (incl. escrow endpoints), byte-identical to core's copy; deterministic XDR
+  fixtures for the mobile decoder (now incl. escrow `open_return` / `expire_refund`).
+- `fixtures/soroban/redemption-escrow.v1.json` - golden contract records and events generated by the Rust tests.
 
 ## The four repositories
 
 | Repository | Owns | Stack | CI |
 |---|---|---|---|
 | [Unbound-core](https://github.com/Unbound224/Unbound-core) | Backend API: issuers, policies, intents, redemptions, audit | TypeScript, Node 22, SQLite | [![CI](https://github.com/Unbound224/Unbound-core/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Unbound224/Unbound-core/actions/workflows/ci.yml) |
-| [Unbound-stellar](https://github.com/Unbound224/Unbound-stellar) (this repo) | Stellar SDK, gateway service and chain worker | TypeScript, @stellar/stellar-sdk | [![CI](https://github.com/Unbound224/Unbound-stellar/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Unbound224/Unbound-stellar/actions/workflows/ci.yml) |
+| [Unbound-stellar](https://github.com/Unbound224/Unbound-stellar) (this repo) | Stellar SDK, gateway service, chain worker, Soroban redemption escrow | TypeScript, @stellar/stellar-sdk, Rust/Soroban | [![CI](https://github.com/Unbound224/Unbound-stellar/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Unbound224/Unbound-stellar/actions/workflows/ci.yml) |
 | [Unbound-site](https://github.com/Unbound224/Unbound-site) | Landing page, partner docs and merchant console | Next.js 16, React 19, Tailwind 4 | [![CI](https://github.com/Unbound224/Unbound-site/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Unbound224/Unbound-site/actions/workflows/ci.yml) |
 | [Unbound-mobile](https://github.com/Unbound224/Unbound-mobile) | Flutter consumer wallet | Flutter, Dart, Riverpod | [![CI](https://github.com/Unbound224/Unbound-mobile/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Unbound224/Unbound-mobile/actions/workflows/ci.yml) |
 

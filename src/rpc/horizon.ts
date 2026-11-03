@@ -2,7 +2,7 @@
  * Horizon adapters. UNVERIFIED AGAINST LIVE TESTNET: the sandbox that built this package had no
  * route to horizon-testnet.stellar.org. The pure mapping functions below are unit-tested against
  * hand-written payloads that follow the public Horizon response shape (NOT recorded responses).
- * The thin Horizon.Server wrappers are type-checked only. Run scripts/testnet-smoke.ts on a
+ * The thin Horizon.Server wrappers are type-checked only. A Testnet smoke script is open work (docs/CONTRIBUTOR_ISSUES.md); run one on a
  * networked machine before relying on them.
  */
 import { Horizon, Transaction, TransactionBuilder } from '@stellar/stellar-sdk';
