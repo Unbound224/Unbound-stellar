@@ -1,0 +1,33 @@
+name: Contracts
+on: [push, pull_request]
+jobs:
+  soroban:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32v1-none
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: contracts
+      - run: cargo fmt --all --check
+      - run: cargo clippy --locked --all-targets -- -D warnings
+      - run: cargo test --locked
+      - name: Build the contract wasm
+        # soroban-sdk 29 refuses wasm builds unless the build system declares spec-shaking support;
+        # this plain cargo build only proves the contract compiles for wasm32v1-none. Deployments use
+        # `stellar contract build` (scripts/deploy-testnet.sh), which shakes the spec itself.
+        env:
+          SOROBAN_SDK_BUILD_SYSTEM_SUPPORTS_SPEC_SHAKING_V2: '1'
+        run: cargo build --locked --release --target wasm32v1-none
+      - run: ls -l target/wasm32v1-none/release/unbound_redemption_escrow.wasm
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unbound-redemption-escrow-wasm
+          path: contracts/target/wasm32v1-none/release/unbound_redemption_escrow.wasm
+          if-no-files-found: error
