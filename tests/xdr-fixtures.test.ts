@@ -6,7 +6,7 @@ import { TESTNET_PASSPHRASE } from '../src/types/index.js';
 
 describe('XDR fixtures for downstream decoders', () => {
   it('checked-in file equals a fresh deterministic generation (regenerate with npx tsx scripts/generate-xdr-fixtures.ts)', async () => {
-    const onDisk = readFileSync(new URL('../fixtures/xdr/transactions.v1.json', import.meta.url), 'utf8');
+    const onDisk = readFileSync(new URL('../fixtures/xdr/transactions.v1.json', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
     expect(onDisk).toBe(JSON.stringify(await generateXdrFixtures(), null, 2) + '\n');
   });
   it('fixtures decode to the operations downstream apps expect', async () => {

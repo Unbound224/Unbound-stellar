@@ -109,7 +109,8 @@ fn golden_fixtures_match() {
         std::fs::write(&path, &body).unwrap();
     }
     let on_disk = std::fs::read_to_string(&path)
-        .expect("fixture missing: run UPDATE_GOLDEN=1 cargo test golden");
+        .expect("fixture missing: run UPDATE_GOLDEN=1 cargo test golden")
+        .replace("\r\n", "\n");
     assert_eq!(
         on_disk, body,
         "golden fixture drifted; regenerate and update the TypeScript adapter tests"
