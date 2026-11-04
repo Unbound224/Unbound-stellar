@@ -59,10 +59,16 @@
         "returnTxHash": "4c44a2c7dcf42390a3da5fd9901a48e7a0691fb9eba20e04eece74ae636cabf3"
       },
       "note": "mode ESCROW"
+    },
+    {
+      "name": "holder claims the timeout refund after the deadline",
+      "ok": true,
+      "redemptionId": "red_5876db58ad2e419b8450ba110e3ae00c",
+      "state": "EXPIRED/EXPIRED_REFUNDED",
+      "txHashes": {
+        "returnTxHash": "4c44a2c7dcf42390a3da5fd9901a48e7a0691fb9eba20e04eece74ae636cabf3",
+        "escrow.closeTxHash": "57eef54681b43d3164e3feb9449f9f8d0154475aabbba03a59a0118101a8c4d8"
+      }
     }
-  ],
-  "pendingExpiry": {
-    "redemptionId": "red_5876db58ad2e419b8450ba110e3ae00c",
-    "deadline": "2026-11-04T13:27:12.000Z"
-  }
+  ]
 }

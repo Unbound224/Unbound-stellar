@@ -77,7 +77,7 @@ npx tsx scripts/m1-demo.ts         # offline demo: issue, quote, settle, and a r
 cd contracts
 cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test
 SOROBAN_SDK_BUILD_SYSTEM_SUPPORTS_SPEC_SHAKING_V2=1 cargo build --release --target wasm32v1-none
-DRY_RUN=1 ../scripts/deploy-testnet.sh   # prints the stellar-cli deploy steps; never run for real yet
+DRY_RUN=1 ../scripts/deploy-testnet.sh   # prints the stellar-cli deploy steps (the real run is recorded in docs/DEPLOYMENT.md)
 ```
 
 The demo runs on `SimulatedLedger`, an in-memory **test adapter** that verifies real XDR signatures, sequence numbers
@@ -99,11 +99,13 @@ Legend: **Built** = implemented and covered by automated tests in this repo. **N
 | Submit classification (CONFIRMED / FAILED / RECONCILING), reconcile by hash, cursor indexer with replay | Built |
 | Gateway service for core (quote, settlement, redemption return, submit, balances) with bearer auth | Built, tested over HTTP on the simulator |
 | Chain worker (pending-hash watcher, event sink with retry and dead-letter file) | Built, tested with a stub core |
-| Horizon adapters (`HorizonClient`) | Type-checked and mapping-tested only; **never run against Testnet** |
+| Horizon adapters (`HorizonClient`) | Mapping-tested, and run against live Testnet on 2026-11-04 (paths, submit, transaction lookup); that run found and fixed the SDK `ledger` link-function bug |
 | Soroban redemption escrow contract: open / confirm / reject / expire_refund, single-use ids, bounded deadlines, issuer = SAC admin, pause for new returns only, events | Built: 22 behaviour and failure-path tests, a seeded invariant test (escrow balance == locked == open returns) and a golden-fixture test; wasm builds in CI |
-| `SorobanRedemptionEscrow` adapter, gateway `/gateway/v1/escrow/*` endpoints, golden Rust -> TypeScript XDR fixtures | Built (on `FixtureSorobanRpc`); `StellarRpcSorobanPort` type-checked only |
-| `scripts/deploy-testnet.sh` (stellar-cli build, deploy, init, admin check, issuer `authorize`) | Written and dry-run in CI; **never run**: no Testnet contract id exists |
-| Real Testnet transaction hashes, account-stream indexing, escrow event indexing from RPC, liquidity pools, reserves/liabilities | Not yet |
+| `SorobanRedemptionEscrow` adapter, gateway `/gateway/v1/escrow/*` endpoints, golden Rust -> TypeScript XDR fixtures | Built (on `FixtureSorobanRpc`); `StellarRpcSorobanPort` run live against Soroban RPC: prepared open_return / confirm / reject / expire_refund landed on Testnet |
+| `scripts/deploy-testnet.sh` (stellar-cli build, deploy, init, admin check, issuer `authorize`) | Run for real on 2026-11-04: contract `CC4ETHM44IUJ4GDRT57VH4OSNEMPEGUKQHQJCUQDIU2LKIAKZYIYOP6C` (see `docs/DEPLOYMENT.md`) |
+| Real Testnet hashes: deploy, escrow smoke (`scripts/testnet-smoke.ts`), core-driven escrow flows, DEX exchange | Recorded in `contracts/deployments/*.json` and `docs/DEPLOYMENT.md` |
+| Network-anchored gateway clock (`LedgerClock`): a host clock 95 s slow made every settlement `tx_too_late` | Built; found live |
+| Account-stream indexing, escrow event indexing from RPC, liquidity pools, reserves/liabilities | Not yet |
 | Published npm package, Docker image, metrics endpoint, fee sponsorship, external audit of the contract | Not yet |
 
 ## Public boundary

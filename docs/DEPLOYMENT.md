@@ -80,7 +80,7 @@ Raw evidence: `contracts/deployments/testnet-smoke.json`.
 Notes, stated plainly:
 - The "refused" rows for the replayed id (`Error(Contract, #6)`) and early `expire_refund` (`#9`) are **contract** refusals from simulation.
 - The two wrong-signer rows are refused **client-side** by stellar-cli ("Missing signing key"), because no signature for that account can be produced. They are not on-chain rejections. stellar-cli signs the auth of any account whose key is in the local keystore, so the victim account's key was created in a throwaway config dir and deleted. On-chain auth enforcement is covered by the contract's Rust tests, not by this run.
-- The expiry refund needs the contract's 1 hour minimum window. It was opened in this run and must be finished with `npx tsx scripts/testnet-smoke.ts finish`. Status: **pending until 2026-11-04T12:03:06.000Z**.
+- The expiry refund needs the contract's 1 hour minimum window. It was opened in this run and finished after the deadline (tx 191ab9acee…, see the follow-up results below); the table above lists the steps of the first pass only.
 - An earlier run of the script aborted on a transient network error and left test returns open; they were rejected by the issuer afterwards. Those extra transactions exist on Testnet but are not part of this log.
 
 ## Live backend run: core -> gateway -> Testnet escrow (2026-11-04)
@@ -103,8 +103,27 @@ Found and fixed by this run (both in `Unbound-core`):
 1. `DATABASE_FILE=./data/dev.db` failed on a first start because the directory did not exist.
 2. `syncTrustedAssets` was never called, so the gateway's registry stayed empty and refused every asset (`asset SHOP is not from a verified issuer`). Core now runs a `sync-trusted-assets` job (at startup and every 30 s).
 
-Not covered yet:
-- The holder's timeout refund (`expire_refund`) for the last redemption: it can only be claimed after 2026-11-04T13:27:12.000Z; run `node --env-file=.env --import tsx scripts/testnet-e2e.ts finish` in `Unbound-core`.
-- The consumer **exchange** (quote, intent, signed swap) was not run live: it needs a second trusted asset and Testnet DEX liquidity, which do not exist yet.
-- The site click-through of the merchant console and `/admin` has not been done.
-- The gateway worker (`src/bin/worker.ts`, which needs an admin session token) was not started, so on-chain event ingestion into core is untested live.
+Follow-up results (same day):
+- The holder's timeout refund for the last core redemption landed after its deadline: redemption `EXPIRED/EXPIRED_REFUNDED`, tx [57eef54681…](https://stellar.expert/explorer/testnet/tx/57eef54681b43d3164e3feb9449f9f8d0154475aabbba03a59a0118101a8c4d8) (checked successful on Horizon, ledger 5557218).
+- The smoke run's `expire_refund` after the deadline also landed: tx [191ab9acee…](https://stellar.expert/explorer/testnet/tx/191ab9aceee9d05c6426024064a0d2c641bc456a6bcb3bf38b52c671d0c401a4) (ledger 5557247; hash recovered from the ledger because the script aborted on a balance-check bug right after the refund, since fixed). The escrow's SHOP balance is 0.
+
+## Live exchange, worker and clock findings (2026-11-04)
+
+**Second asset and liquidity (Testnet, synthetic).** New issuer alias `unbound-usdc-issuer` (public `GCHGR7UN3XYKUEZJAZ74QSXAJOB7DIOGFVDS5KD3LDMNQVBO3HHOU5QF`) issued `USDC`; the distributor `GAOEO57YBDDCJGTNUTD7CFFA6OIZUW44RQ7GN6MEJ4VDXXFFLEVZ5FPC` holds 10000 USDC and posted DEX offer 941249 selling 5000 USDC for SHOP at 1:1; the consumer has a USDC trustline. Core registered USDC as a swap target through the new `POST /v1/admin/targets`.
+
+**Exchange through core and the gateway (`Unbound-core/scripts/testnet-exchange.ts`).** Real quote from Horizon strict-send paths, intent, holder-signed settlement, state `CONFIRMED`:
+
+| Run | Tx | Ledger |
+|---|---|---|
+| 1 | [5dcd472352…](https://stellar.expert/explorer/testnet/tx/5dcd472352b8d9e704ca0c933de35c8bea50b6a82d7a25136504470cc7b9de2c) | 5557441 (effects: SHOP -5, USDC +5, two trades) |
+| 2 (evidence file `testnet-exchange.json`) | [5879422d5f…](https://stellar.expert/explorer/testnet/tx/5879422d5f67f3388f26f525a7cadaa9640eaa1c521fed272de3fc3dfbe775e1) | 5557552 |
+
+Known gap: `amountOutActual` stays `null` for an intent confirmed synchronously at submit; only the worker path (RECONCILING intents) delivers the ledger amount.
+
+**Gateway worker.** Started with an admin session token for core (obtained by logging in; never stored). It resolved a queued, already-confirmed hash against live Horizon and delivered the event to core: the pending file emptied, no dead letters, no errors. Core treated the event as a no-op because the intent was already `CONFIRMED`. Before the fix below it failed every tick with `ledger: expected number, received function`.
+
+**Bugs this run found and fixed.**
+1. A host clock 95 s behind Testnet made every settlement `tx_too_late` (quote expiry and tx `maxTime` are set from the host clock). The gateway now anchors its clock to Horizon's `Date` header (`LedgerClock`, warns when skew exceeds 5 s). Fix the host clock too (NTP).
+2. `HorizonClient.getTransaction` returned the stellar-sdk link function in `ledger` instead of the number (`ledger_attr`).
+3. `stellar-cli` loads a `.env` from its working directory; the smoke script now runs it outside the repo.
+4. Core never pushed trusted assets to the gateway, and had no route to register swap targets (both fixed in `Unbound-core`).
