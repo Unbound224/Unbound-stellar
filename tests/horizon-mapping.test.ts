@@ -29,6 +29,11 @@ describe('Horizon mapping (hand-written fixtures)', () => {
   it('maps transactions', () => {
     expect(mapTx({ hash: 'h', ledger: 5, successful: false, paging_token: 'p', created_at: '2026-11-02T00:00:00Z' })).toMatchObject({ successful: false, pagingToken: 'p' });
   });
+  it('maps stellar-sdk call() records where `ledger` is a link function and the number is `ledger_attr` (found live)', () => {
+    const rec = { hash: 'h', ledger: () => Promise.resolve({}), ledger_attr: 5557441, successful: true, paging_token: 'p', created_at: '2026-11-04T16:48:00Z' };
+    expect(mapTx(rec)).toMatchObject({ hash: 'h', ledger: 5557441, successful: true });
+    expect(() => mapTx({ ...rec, ledger_attr: undefined })).toThrow(/numeric ledger/);
+  });
   it('treats only a 400 with result codes as a definitive rejection', () => {
     const r = mapSubmitError('h', { response: { status: 400, data: { extras: { result_codes: { transaction: 'tx_failed', operations: ['op_under_dest_min'] } } } } });
     expect(r).toMatchObject({ status: 'REJECTED' });

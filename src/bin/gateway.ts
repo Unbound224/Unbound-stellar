@@ -6,6 +6,7 @@
 import { join } from 'node:path';
 import { TrustedAssetRegistry } from '../registry.js';
 import { HorizonClient } from '../rpc/horizon.js';
+import { LedgerClock } from '../rpc/ledger-clock.js';
 import { createGatewayServer } from '../service/server.js';
 import { FilePendingStore } from '../worker/pending-store.js';
 import { SorobanRedemptionEscrow, StellarRpcSorobanPort } from '../soroban/escrow.js';
@@ -20,6 +21,11 @@ const stateDir = process.env.STATE_DIR ?? './state';
 const registry = new TrustedAssetRegistry(); // empty until unbound-core pushes the trusted list
 const escrowId = process.env.ESCROW_CONTRACT_ID;
 const escrow = escrowId ? new SorobanRedemptionEscrow({ rpc: new StellarRpcSorobanPort(process.env.SOROBAN_RPC_URL), contractId: escrowId, registry }) : undefined;
+// Anchor quote expiry and transaction time bounds to network time: a slow host clock would make every settlement tx_too_late.
+const clock = new LedgerClock(process.env.HORIZON_URL ?? 'https://horizon-testnet.stellar.org');
+const skew = await clock.sync();
+if (Math.abs(skew) > 5000) console.warn(`host clock differs from network time by ${Math.round(skew / 1000)} s; using network time. Fix the host clock (NTP).`);
+setInterval(() => void clock.sync(), 5 * 60_000).unref();
 const server = createGatewayServer({
   reader: horizon,
   pathSource: horizon,
@@ -28,6 +34,7 @@ const server = createGatewayServer({
   registry,
   pending: new FilePendingStore(join(stateDir, 'pending.json')),
   token,
+  now: clock.now,
   ...(escrow ? { escrow } : {}),
 });
 const port = Number(process.env.PORT ?? 3002);

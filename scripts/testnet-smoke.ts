@@ -47,7 +47,7 @@ function cli(args: string[], allowFail = false): { ok: boolean; out: string; std
   // stellar-cli prints the explorer link (with the tx hash) on stderr, so capture both streams on success too.
   // Transient network errors ("client error (Connect)") are retried; contract/auth refusals are not.
   for (let attempt = 1; ; attempt++) {
-    const r = spawnSync('stellar', args, { encoding: 'utf8' });
+    const r = spawnSync('stellar', args, { encoding: 'utf8', cwd: tmpdir() }) // not the repo dir: stellar-cli would load its .env (gateway settings);
     const out = `${r.stdout ?? ''}${r.stderr ?? ''}`;
     if (r.status === 0) return { ok: true, out, stdout: r.stdout ?? '' };
     if (attempt < 4 && /client error \(Connect\)|timed out|connection (reset|refused)|Too Many Requests/i.test(out)) continue;
@@ -125,15 +125,15 @@ async function main(): Promise<void> {
     const log = JSON.parse(readFileSync(outFile, 'utf8')) as Log;
     assert(!!log.expiry, 'no pending expiry return in testnet-smoke.json: run the main smoke first');
     const { redemptionId, deadline } = log.expiry!;
-    const early = invoke(CONSUMER, escrow, 'expire_refund', ['--redemption_id', redemptionId], true);
+    const before = balance(sac, consumer);
     if (nowSec() < deadline) {
+      const early = invoke(CONSUMER, escrow, 'expire_refund', ['--redemption_id', redemptionId], true);
       assert(!early.ok, 'expire_refund before the deadline must be refused');
       console.log(`deadline not reached yet (${new Date(deadline * 1000).toISOString()}); early expire_refund was refused as expected. Run again later.`);
       record(log, { name: 'expire_refund before the deadline is refused', expected: 'DeadlineNotReached (#9)', result: 'refused', detail: early.out.match(/Error\(Contract, #\d+\)/)?.[0] });
       return;
     }
-    const before = balance(sac, consumer);
-    const done = early.ok ? early : invoke(CONSUMER, escrow, 'expire_refund', ['--redemption_id', redemptionId]);
+    const done = invoke(CONSUMER, escrow, 'expire_refund', ['--redemption_id', redemptionId]);
     const after = balance(sac, consumer);
     assert(after - before === 5n * ONE, `consumer should regain 5 ${CODE}, got ${after - before}`);
     assert(balance(sac, escrow) === 0n, 'escrow balance must return to zero');

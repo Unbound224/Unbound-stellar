@@ -77,12 +77,15 @@
       "expected": "DeadlineNotReached (#9)",
       "result": "refused",
       "detail": "Error(Contract, #9)"
+    },
+    {
+      "name": "expire_refund after the deadline returns the credit",
+      "expected": "consumer +5, escrow 0",
+      "result": "ok",
+      "txHash": "191ab9aceee9d05c6426024064a0d2c641bc456a6bcb3bf38b52c671d0c401a4",
+      "detail": "hash recovered from ledger 5557247 after the script aborted post-refund on a balance-check bug (fixed); get_return shows status Expired"
     }
   ],
   "victim": "GDQ3SQGSNDWSLMVCTSOC444PLJIEJUC7EQ3VARDLL56MKEX6RQMM7T2K",
-  "expiry": {
-    "redemptionId": "41e3b6bf19a991b1fba0cbd3ff6872b2133ea21164e6d2c638bf422ac300faa3",
-    "deadline": 1793793786,
-    "openedTx": "573ee85ba2eb2e00cd0c37c9d097ee1ee256ea534ede42429eb937f5ef6202be"
-  }
+  "finishedAt": "2026-11-04T16:31:37.927Z"
 }
