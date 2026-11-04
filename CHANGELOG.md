@@ -6,6 +6,9 @@ tagged by the maintainer; nothing below has been deployed to Stellar Testnet or 
 ## [Unreleased]
 
 ### Added
+- `LedgerClock`: the gateway anchors quote expiry and transaction time bounds to network time (Horizon `Date` header); a host clock
+  95 s slow made every settlement `tx_too_late` on the first live run. Fixed `HorizonClient.getTransaction` returning the SDK's
+  `ledger` link function (broke the worker). First real Testnet deploy, escrow smoke run and DEX exchange recorded in `docs/DEPLOYMENT.md`.
 - `contracts/redemption-escrow`: Soroban redemption-return escrow (Rust, soroban-sdk 29.0.1) with `init`,
   `open_return`, `confirm`, `reject`, `expire_refund`, `set_paused`, getters and lifecycle events; single-use
   redemption ids, 1 h - 30 day deadlines, issuer must be the SAC admin.
