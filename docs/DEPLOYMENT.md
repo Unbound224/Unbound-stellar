@@ -82,3 +82,29 @@ Notes, stated plainly:
 - The two wrong-signer rows are refused **client-side** by stellar-cli ("Missing signing key"), because no signature for that account can be produced. They are not on-chain rejections. stellar-cli signs the auth of any account whose key is in the local keystore, so the victim account's key was created in a throwaway config dir and deleted. On-chain auth enforcement is covered by the contract's Rust tests, not by this run.
 - The expiry refund needs the contract's 1 hour minimum window. It was opened in this run and must be finished with `npx tsx scripts/testnet-smoke.ts finish`. Status: **pending until 2026-11-04T12:03:06.000Z**.
 - An earlier run of the script aborted on a transient network error and left test returns open; they were rejected by the issuer afterwards. Those extra transactions exist on Testnet but are not part of this log.
+
+## Live backend run: core -> gateway -> Testnet escrow (2026-11-04)
+
+Run with `Unbound-core/scripts/testnet-e2e.ts` against a locally running gateway (`ESCROW_CONTRACT_ID` = the contract above) and core
+(`STELLAR_ESCROW_ENABLED=true`, `ESCROW_WINDOW_HOURS=2`). Raw evidence: `contracts/deployments/testnet-e2e.json`.
+Merchant, program policy and wallet sessions were created through core's real HTTP API with synthetic data; the issuer and holder signed the
+Soroban transactions with Testnet keys held in the local stellar-cli keystore.
+
+| Step | Core state | Tx hashes (all checked as `successful` on Horizon) |
+|---|---|---|
+| merchant registered, verified by an admin, credit program registered with an issuer-signed policy | ok | n/a |
+| holder returns 4 SHOP into the escrow (confirm) | RETURN_CONFIRMED/HELD | [0c9b01b583…](https://stellar.expert/explorer/testnet/tx/0c9b01b583a68df7a6123c1439ec29fa92375eedba41ae78cc899a9727d8f0d2) |
+| merchant confirms; issuer-signed escrow confirm submitted | FULFILLED/RELEASED | [0c9b01b583…](https://stellar.expert/explorer/testnet/tx/0c9b01b583a68df7a6123c1439ec29fa92375eedba41ae78cc899a9727d8f0d2) [92eab2cd49…](https://stellar.expert/explorer/testnet/tx/92eab2cd492451d1e34669d8c0d97a853d806cf6f99399630ae03af29bf258fa) |
+| holder returns 3 SHOP into the escrow (reject) | RETURN_CONFIRMED/HELD | [3beacc887d…](https://stellar.expert/explorer/testnet/tx/3beacc887d25fcf03e41ee1ff8afd1b452c99de5bdf4207ce7ad32a008301176) |
+| merchant rejects; credit refunded to the holder by the escrow | REJECTED/REFUNDED | [3beacc887d…](https://stellar.expert/explorer/testnet/tx/3beacc887d25fcf03e41ee1ff8afd1b452c99de5bdf4207ce7ad32a008301176) [88a492dd86…](https://stellar.expert/explorer/testnet/tx/88a492dd8613d69bfda76dbc80bf40864c93eb7571db805cecf424640a4e9187) |
+| holder returns 2 SHOP into the escrow (expiry) | RETURN_CONFIRMED/HELD | [4c44a2c7dc…](https://stellar.expert/explorer/testnet/tx/4c44a2c7dcf42390a3da5fd9901a48e7a0691fb9eba20e04eece74ae636cabf3) |
+
+Found and fixed by this run (both in `Unbound-core`):
+1. `DATABASE_FILE=./data/dev.db` failed on a first start because the directory did not exist.
+2. `syncTrustedAssets` was never called, so the gateway's registry stayed empty and refused every asset (`asset SHOP is not from a verified issuer`). Core now runs a `sync-trusted-assets` job (at startup and every 30 s).
+
+Not covered yet:
+- The holder's timeout refund (`expire_refund`) for the last redemption: it can only be claimed after 2026-11-04T13:27:12.000Z; run `node --env-file=.env --import tsx scripts/testnet-e2e.ts finish` in `Unbound-core`.
+- The consumer **exchange** (quote, intent, signed swap) was not run live: it needs a second trusted asset and Testnet DEX liquidity, which do not exist yet.
+- The site click-through of the merchant console and `/admin` has not been done.
+- The gateway worker (`src/bin/worker.ts`, which needs an admin session token) was not started, so on-chain event ingestion into core is untested live.
