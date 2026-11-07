@@ -15,7 +15,7 @@ Everything Unbound did up to M1 met that bar without contracts:
 | Exchanging credit | Strict-send path payments over the native order book, with a min-output floor. The ledger enforces the floor atomically. |
 | Settlement truth | Transaction results and hashes; the indexer reconciles them. |
 
-One capability does not fit: **redemption returns**. The spec (`docs/SRD.md`, `docs/UX_FLOWS.md`) says
+One capability does not fit: **redemption returns**. The product rules say
 a consumer returns credit to the issuer, the merchant then either confirms fulfilment or rejects, a
 rejection must refund the consumer, and a merchant that never answers must not keep the credit.
 

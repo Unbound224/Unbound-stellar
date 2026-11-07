@@ -4,10 +4,10 @@
  * consumer (open_return), the issuer (confirm / reject) or anyone (expire_refund), and decodes the
  * contract's records and events.
  *
- * All RPC access goes through `SorobanRpcPort`. `StellarRpcSorobanPort` wraps `rpc.Server` and is
- * type-checked only: it has NEVER been run against Stellar Testnet RPC (no network from the build
- * sandbox). Tests drive `SorobanRedemptionEscrow` with `FixtureSorobanRpc` and with byte-for-byte
- * golden XDR produced by the Rust contract tests (fixtures/soroban/redemption-escrow.v1.json).
+ * All RPC access goes through `SorobanRpcPort`. `StellarRpcSorobanPort` wraps `rpc.Server` and was run
+ * against Stellar Testnet RPC on 2026-11-04 (prepared open_return / confirm / reject / expire_refund landed;
+ * see docs/DEPLOYMENT.md). Unit tests drive `SorobanRedemptionEscrow` with `FixtureSorobanRpc` and with
+ * byte-for-byte golden XDR produced by the Rust contract tests (fixtures/soroban/redemption-escrow.v1.json).
  */
 import { createHash } from 'node:crypto';
 import {
@@ -301,8 +301,8 @@ export function escrowAmount(r: EscrowedReturn): string {
 }
 
 /**
- * `SorobanRpcPort` over Stellar RPC (`rpc.Server`). UNVERIFIED: type-checked only, never run against
- * soroban-testnet.stellar.org. Run scripts/deploy-testnet.sh and a manual smoke test before use.
+ * `SorobanRpcPort` over Stellar RPC (`rpc.Server`). Exercised against soroban-testnet.stellar.org
+ * (see docs/DEPLOYMENT.md); Testnet only.
  */
 export class StellarRpcSorobanPort implements SorobanRpcPort {
   readonly networkPassphrase = TESTNET_PASSPHRASE;

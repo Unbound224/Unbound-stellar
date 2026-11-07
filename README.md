@@ -1,50 +1,50 @@
 <div align="center">
 
-<img src="./brand/icon.svg" alt="Unbound logo" width="96" height="96" />
+<img src="https://raw.githubusercontent.com/Unbound224/Unbound-stellar/main/brand/icon.svg" alt="Unbound logo" width="96" height="96" />
 
 # Unbound-stellar
 
-**The Stellar-native layer of Unbound: trustline and issuer checks, strict-send path quotes, unsigned transaction builders, submission, ledger reconciliation, and the one Soroban contract (the redemption escrow).**
+**The Stellar layer of Unbound: issuer and trustline checks, path quotes, unsigned transaction builders, a gateway service, a chain worker, and the one Soroban contract, the redemption escrow.**
 
 [![CI](https://github.com/Unbound224/Unbound-stellar/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Unbound224/Unbound-stellar/actions/workflows/ci.yml)
+[![Contracts CI](https://github.com/Unbound224/Unbound-stellar/actions/workflows/contracts.yml/badge.svg?branch=main)](https://github.com/Unbound224/Unbound-stellar/actions/workflows/contracts.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-7537F5.svg)](./LICENSE)
 [![Network: Stellar Testnet](https://img.shields.io/badge/network-Stellar%20Testnet-10092E.svg)](https://developers.stellar.org/docs/networks)
-[![Status: pre-release](https://img.shields.io/badge/status-pre--release-AD8AFF.svg)](#project-status)
+[![Rust + TypeScript](https://img.shields.io/badge/Soroban-Rust%20%2B%20TypeScript-AD8AFF.svg)](#tech-stack)
 
-Part of **[Unbound](https://github.com/Unbound224)** - turn stranded value into something usable.
+[Docs](https://github.com/Unbound224/Unbound-site/tree/main/gitbook) · [Live site](https://unbound-web1.vercel.app) · [Quick start](#quick-start) · [Architecture](./docs/ARCHITECTURE.md) · [Contract on Stellar Expert](https://stellar.expert/explorer/testnet/contract/CC4ETHM44IUJ4GDRT57VH4OSNEMPEGUKQHQJCUQDIU2LKIAKZYIYOP6C) · [Contributing](./CONTRIBUTING.md)
 
 </div>
 
-## What is Unbound?
+## What this is
 
-Store credit is usually stuck inside one retailer. Unbound lets a person exchange store credit that a retailer has
-**genuinely issued and agreed to honor** for other Stellar assets, at a real order-book quote that they sign on their
-own device, or redeem it with the issuer.
+Store credit is usually stuck inside one retailer. Unbound lets a person exchange store credit that a retailer has issued
+and agreed to honor for other Stellar assets, at a real order-book quote that they sign on their own device, or redeem it with
+the issuer. This repository is the part that touches the ledger. It checks issuer accounts and trustlines, finds strict-send
+paths, builds unsigned transactions, submits them, and reconciles the outcome by hash. It also holds Unbound's only smart
+contract: an escrow that keeps returned credit safe until the issuer confirms, rejects, or the deadline passes.
 
-- **Issuer-authorized only.** A verified merchant signs a redemption policy with its Stellar issuer key and must
-  authorize every holder's trustline. No issuer, no usable credit; arbitrary gift cards are out of scope.
-- **No fake liquidity.** Quotes come from real Stellar path payments, expire and carry a minimum-output floor. No route
-  means no quote. Unbound never promises a price, liquidity or fiat cash-out.
-- **Ledger-truthful.** Nothing is shown as settled until the ledger confirms it; unknown outcomes reconcile by hash.
-- **Testnet only today.** Mainnet needs an external security review and legal/compliance work that has not happened.
+Unbound is a Testnet prototype. It has had no security audit and holds no real funds.
 
-## This repository
+## Status
 
-`Unbound-stellar` owns everything that touches the ledger: verifying issuer accounts and flags, checking trustlines and
-authorization, finding strict-send paths with a slippage cap and expiry, building **unsigned** transactions (settlement,
-trustline authorization, issuance, redemption return), classifying submissions, and indexing confirmations into
-versioned reconciliation events for `Unbound-core`. It ships as a TypeScript SDK plus a gateway HTTP service and a
-chain worker. Only the Testnet passphrase is accepted.
+| Piece | State | Evidence |
+|---|---|---|
+| Redemption escrow contract (Soroban, `soroban-sdk` 29.0.1) | Deployed on Testnet | [`CC4ETHM4...YOP6C`](https://stellar.expert/explorer/testnet/contract/CC4ETHM44IUJ4GDRT57VH4OSNEMPEGUKQHQJCUQDIU2LKIAKZYIYOP6C), wasm hash `37726f8c...c415a`, deployed 2026-11-04 |
+| Deploy transactions | Successful on Horizon | [upload](https://stellar.expert/explorer/testnet/tx/f4c594da02264172e2cc7e325622329e8d2820f8abc5680c07057a82a0d7be12) · [deploy](https://stellar.expert/explorer/testnet/tx/1c827ee3ed78890545716540160f2e87b1f81b0b8cb5e3d2461e2ca246aac36f) · [init](https://stellar.expert/explorer/testnet/tx/23e600cd69599455b7be3b016925b925198d8960f1c9d06df620bb73e0c081be) |
+| Escrow smoke run | open/confirm, open/reject, replayed id refused (error #6), early refund refused (#9), refund after the deadline | [confirm](https://stellar.expert/explorer/testnet/tx/8af95ad4e234b4e14721f39198d464a958900b578c8870c570eef6a8a0a51c05) · [reject](https://stellar.expert/explorer/testnet/tx/3a05c7b222cb02752cf2fc968d2ec263c20e438a8a6069e960ad81bea4320b07) · [expiry refund](https://stellar.expert/explorer/testnet/tx/191ab9aceee9d05c6426024064a0d2c641bc456a6bcb3bf38b52c671d0c401a4) |
+| Core to gateway to escrow, end to end | Confirm, reject and holder timeout refund landed | [return](https://stellar.expert/explorer/testnet/tx/0c9b01b583a68df7a6123c1439ec29fa92375eedba41ae78cc899a9727d8f0d2) · [confirm](https://stellar.expert/explorer/testnet/tx/92eab2cd492451d1e34669d8c0d97a853d806cf6f99399630ae03af29bf258fa) · [timeout refund](https://stellar.expert/explorer/testnet/tx/57eef54681b43d3164e3feb9449f9f8d0154475aabbba03a59a0118101a8c4d8) |
+| Exchange SHOP to USDC through the DEX | Quote, intent, signed settlement, confirmed | [settlement](https://stellar.expert/explorer/testnet/tx/5879422d5f67f3388f26f525a7cadaa9640eaa1c521fed272de3fc3dfbe775e1) |
+| Hosted gateway | Running on a free Render instance (development entrypoint) | `https://unbound-gateway.onrender.com`, answers 401 without its bearer token |
+| Tests | 128 TypeScript tests (12 files) and 24 contract tests, plus golden XDR fixtures shared with the mobile decoder; `npm run check` exits 0 | CI badges above |
+| On-chain rejection of a wrong signer | Not demonstrated; the smoke run's wrong-signer rows were refused by `stellar-cli` before submit | Contract auth is covered by the Rust tests |
+| Account-stream indexing, escrow events from RPC, liquidity pools, reserves and liabilities | Not built | [Open issues](https://github.com/Unbound224/Unbound-stellar/issues) |
+| External audit, published package, Docker image, fee sponsorship | Not done | |
 
-It also owns Unbound's only smart contract, [`contracts/redemption-escrow`](./contracts/redemption-escrow) (Rust,
-soroban-sdk 29.0.1): returned credit is held until the issuer confirms (released to the issuer), rejects (refunded),
-or the deadline passes (anyone can trigger the refund). Why this is the one place Soroban is used:
-[ADR 0002](./docs/adr/0002-soroban-redemption-escrow.md). The TypeScript side (`SorobanRedemptionEscrow`) builds
-unsigned, simulated invocations and decodes records and events, tested against golden XDR produced by the Rust tests.
+Every hash above was checked as `successful` on Horizon. The full log, with the deploy script output, is in
+[`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md) and the raw JSON is in [`contracts/deployments/`](./contracts/deployments).
 
-## Architecture
-
-Unbound is four independently tested repositories with one owner per boundary. This one is highlighted.
+## How it fits together
 
 ```mermaid
 flowchart LR
@@ -61,10 +61,28 @@ flowchart LR
   style G fill:#7537F5,stroke:#10092E,color:#ffffff
 ```
 
-Clients never build Stellar transactions, and core never reimplements ledger logic. Details:
-[`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) and [`docs/STELLAR_PROTOCOL.md`](./docs/STELLAR_PROTOCOL.md).
+Clients never build Stellar transactions, and core never reimplements ledger logic.
 
-## Quickstart
+| Repository | Owns | CI |
+|---|---|---|
+| [Unbound-core](https://github.com/Unbound224/Unbound-core) | Backend API: issuers, policies, intents, redemptions, audit | [![CI](https://github.com/Unbound224/Unbound-core/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Unbound224/Unbound-core/actions/workflows/ci.yml) |
+| [Unbound-stellar](https://github.com/Unbound224/Unbound-stellar) (this repo) | Stellar SDK, gateway service, chain worker, Soroban escrow | [![CI](https://github.com/Unbound224/Unbound-stellar/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Unbound224/Unbound-stellar/actions/workflows/ci.yml) |
+| [Unbound-site](https://github.com/Unbound224/Unbound-site) | Landing page, merchant and reviewer consoles, GitBook source | [![CI](https://github.com/Unbound224/Unbound-site/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Unbound224/Unbound-site/actions/workflows/ci.yml) |
+| [Unbound-mobile](https://github.com/Unbound224/Unbound-mobile) | Flutter consumer wallet | [![CI](https://github.com/Unbound224/Unbound-mobile/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Unbound224/Unbound-mobile/actions/workflows/ci.yml) |
+
+Why Soroban is used in exactly one place: [ADR 0002](./docs/adr/0002-soroban-redemption-escrow.md). Everything else uses
+classic Stellar operations, because path payments, trustlines and issuer authorization already do the job.
+
+## Tech stack
+
+| Layer | Choice |
+|---|---|
+| SDK, gateway, worker | TypeScript, Node 22+, `@stellar/stellar-sdk`, zod |
+| Contract | Rust, `soroban-sdk` 29.0.1, target `wasm32v1-none` |
+| Ledger access | Horizon and Soroban RPC (Testnet only; any other passphrase is refused) |
+| Tests | Vitest, `cargo test` with a seeded invariant test, golden Rust to TypeScript XDR fixtures |
+
+## Quick start
 
 Requires Node 22+.
 
@@ -72,82 +90,71 @@ Requires Node 22+.
 npm ci
 npm run check                      # lint + typecheck + tests + build
 npx tsx scripts/m1-demo.ts         # offline demo: issue, quote, settle, and a refused no-trustline route
-
-# the Soroban contract (Rust stable + wasm32v1-none)
-cd contracts
-cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test
-SOROBAN_SDK_BUILD_SYSTEM_SUPPORTS_SPEC_SHAKING_V2=1 cargo build --release --target wasm32v1-none
-DRY_RUN=1 ../scripts/deploy-testnet.sh   # prints the stellar-cli deploy steps (the real run is recorded in docs/DEPLOYMENT.md)
 ```
 
-The demo runs on `SimulatedLedger`, an in-memory **test adapter** that verifies real XDR signatures, sequence numbers
-and time bounds; its hashes are not Testnet hashes. The gateway (`npm run gateway`, needs `GATEWAY_TOKEN`) and worker
-(`npm run worker`, needs `CORE_URL` + `CORE_TOKEN`) are written and tested over HTTP but have **never been run
-against Horizon** (see `.env.example`).
+The demo runs on `SimulatedLedger`, an in-memory test adapter that verifies real XDR signatures, sequence numbers and time
+bounds. Its hashes are not Testnet hashes.
 
-## Project status
+The contract (Rust stable plus the `wasm32v1-none` target; on Windows use the MSVC toolchain):
 
-Legend: **Built** = implemented and covered by automated tests in this repo. **Not yet** = not started or not verified.
+```bash
+cd contracts
+cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test
+cd ..
+DRY_RUN=1 scripts/deploy-testnet.sh   # prints the stellar-cli steps; drop DRY_RUN to deploy for real
+```
 
-| Capability | Status |
-|---|---|
-| Exact amount math (integer base units, 7 dp, no floats) | Built |
-| Verified-issuer registry, fail-closed on untrusted or malformed assets; issuer flag and trustline checks | Built (on the simulator) |
-| Unsigned builders: issuer setup, authorize trustline, issue credit, change trust, redemption return | Built (on the simulator) |
-| Strict-send quotes: expiry, slippage cap (<= 10%), min-output floor, tamper-evident id, approved-route filter | Built |
-| Settlement builder re-validating freshness, balances, authorization and destination trustline | Built |
-| Submit classification (CONFIRMED / FAILED / RECONCILING), reconcile by hash, cursor indexer with replay | Built |
-| Gateway service for core (quote, settlement, redemption return, submit, balances) with bearer auth | Built, tested over HTTP on the simulator |
-| Chain worker (pending-hash watcher, event sink with retry and dead-letter file) | Built, tested with a stub core |
-| Horizon adapters (`HorizonClient`) | Mapping-tested, and run against live Testnet on 2026-11-04 (paths, submit, transaction lookup); that run found and fixed the SDK `ledger` link-function bug |
-| Soroban redemption escrow contract: open / confirm / reject / expire_refund, single-use ids, bounded deadlines, issuer = SAC admin, pause for new returns only, events | Built: 22 behaviour and failure-path tests, a seeded invariant test (escrow balance == locked == open returns) and a golden-fixture test; wasm builds in CI |
-| `SorobanRedemptionEscrow` adapter, gateway `/gateway/v1/escrow/*` endpoints, golden Rust -> TypeScript XDR fixtures | Built (on `FixtureSorobanRpc`); `StellarRpcSorobanPort` run live against Soroban RPC: prepared open_return / confirm / reject / expire_refund landed on Testnet |
-| `scripts/deploy-testnet.sh` (stellar-cli build, deploy, init, admin check, issuer `authorize`) | Run for real on 2026-11-04: contract `CC4ETHM44IUJ4GDRT57VH4OSNEMPEGUKQHQJCUQDIU2LKIAKZYIYOP6C` (see `docs/DEPLOYMENT.md`) |
-| Real Testnet hashes: deploy, escrow smoke (`scripts/testnet-smoke.ts`), core-driven escrow flows, DEX exchange | Recorded in `contracts/deployments/*.json` and `docs/DEPLOYMENT.md` |
-| Network-anchored gateway clock (`LedgerClock`): a host clock 95 s slow made every settlement `tx_too_late` | Built; found live |
-| Account-stream indexing, escrow event indexing from RPC, liquidity pools, reserves/liabilities | Not yet |
-| Published npm package, Docker image, metrics endpoint, fee sponsorship, external audit of the contract | Not yet |
+Run the gateway against Testnet (needs your own random `GATEWAY_TOKEN` of 16+ characters):
 
-## Public boundary
+```bash
+export GATEWAY_TOKEN=<random 16+ chars> ESCROW_CONTRACT_ID=CC4ETHM44IUJ4GDRT57VH4OSNEMPEGUKQHQJCUQDIU2LKIAKZYIYOP6C
+npm run gateway                    # http://127.0.0.1:3002, Horizon + Soroban RPC on Testnet
+```
 
-- TypeScript API exported from [`src/index.ts`](./src/index.ts).
-- [`schemas/reconciliation-event.v1.json`](./schemas) (generated from zod with `npm run schemas`, snapshot-tested) and
-  `fixtures/reconciliation-event.confirmed.v1.json` - consumed by `Unbound-core`.
-- `fixtures/gateway/*.json` - gateway contract (incl. escrow endpoints), byte-identical to core's copy; deterministic XDR
-  fixtures for the mobile decoder (now incl. escrow `open_return` / `expire_refund`).
-- `fixtures/soroban/redemption-escrow.v1.json` - golden contract records and events generated by the Rust tests.
+See [`.env.example`](./.env.example) for every variable. The live scripts are [`scripts/testnet-smoke.ts`](./scripts/testnet-smoke.ts) (escrow
+paths on Testnet using `stellar keys` aliases, never raw secrets) and `scripts/deploy-testnet.sh`.
 
-## The four repositories
+## Project structure
 
-| Repository | Owns | Stack | CI |
-|---|---|---|---|
-| [Unbound-core](https://github.com/Unbound224/Unbound-core) | Backend API: issuers, policies, intents, redemptions, audit | TypeScript, Node 22, SQLite | [![CI](https://github.com/Unbound224/Unbound-core/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Unbound224/Unbound-core/actions/workflows/ci.yml) |
-| [Unbound-stellar](https://github.com/Unbound224/Unbound-stellar) (this repo) | Stellar SDK, gateway service, chain worker, Soroban redemption escrow | TypeScript, @stellar/stellar-sdk, Rust/Soroban | [![CI](https://github.com/Unbound224/Unbound-stellar/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Unbound224/Unbound-stellar/actions/workflows/ci.yml) |
-| [Unbound-site](https://github.com/Unbound224/Unbound-site) | Landing page, partner docs and merchant console | Next.js 16, React 19, Tailwind 4 | [![CI](https://github.com/Unbound224/Unbound-site/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Unbound224/Unbound-site/actions/workflows/ci.yml) |
-| [Unbound-mobile](https://github.com/Unbound224/Unbound-mobile) | Flutter consumer wallet | Flutter, Dart, Riverpod | [![CI](https://github.com/Unbound224/Unbound-mobile/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Unbound224/Unbound-mobile/actions/workflows/ci.yml) |
+```text
+src/            SDK: amounts, registry, quotes, builders, settlement, indexer, gateway server, worker, Soroban adapter
+contracts/      redemption-escrow (Rust) and deployments/*.json (public evidence)
+fixtures/       golden XDR, gateway and Soroban fixtures shared with the sibling repos
+schemas/        JSON Schema for reconciliation events (generated from zod)
+scripts/        deploy-testnet.sh, testnet-smoke.ts, m1-demo.ts, fixture generators
+docs/           architecture, security, deployment log, Stellar protocol notes, ADRs
+```
 
-## Contributing and Drips Wave
+## Contributing
 
-Contributions are welcome. Start with [`CONTRIBUTING.md`](./CONTRIBUTING.md), then pick from the scoped, testable ideas in
-[`docs/CONTRIBUTOR_ISSUES.md`](./docs/CONTRIBUTOR_ISSUES.md). Unbound intends to take part in
-[Drips Wave](https://docs.drips.network/wave/maintainers/participating-in-a-wave/); that is subject to Drips' review and
-limits, and no rewards are promised. Wave issues are opened only once their dependencies and acceptance tests are ready.
-Everyone agrees to the [Code of Conduct](./CODE_OF_CONDUCT.md).
+Pick a [Stellar Wave issue](https://github.com/Unbound224/Unbound-stellar/issues?q=is%3Aopen+label%3A%22Stellar+Wave%22). Each has a
+complexity label (`trivial`, `medium`, `high`), scope, implementation notes and acceptance criteria. Read
+[`CONTRIBUTING.md`](./CONTRIBUTING.md) first, comment on the issue to claim it, and open a PR with `npm run check` green.
+Everyone follows the [Code of Conduct](./CODE_OF_CONDUCT.md).
 
 ## Security
 
-Please report vulnerabilities privately (Security tab, **Report a vulnerability**) as described in
-[`SECURITY.md`](./SECURITY.md). The threat model is in [`docs/SECURITY.md`](./docs/SECURITY.md). Testnet only: never use
-real funds, real customer data or Mainnet keys with this code.
+Unaudited, Testnet only. Never use real funds or Mainnet keys with this code. Report vulnerabilities privately through the
+[Security tab](https://github.com/Unbound224/Unbound-stellar/security); see [`SECURITY.md`](./SECURITY.md) and the threat model in
+[`docs/SECURITY.md`](./docs/SECURITY.md).
 
-## Documentation
+## Community
 
-[`docs/PRD.md`](./docs/PRD.md) (product) · [`docs/SRD.md`](./docs/SRD.md) (requirements, API, states) ·
-[`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) · [`docs/TECHNICAL_BUILD.md`](./docs/TECHNICAL_BUILD.md) ·
-[`docs/ROADMAP.md`](./docs/ROADMAP.md) · [`docs/BRAND.md`](./docs/BRAND.md) · [`AGENTS.md`](./AGENTS.md) (rules for coding agents).
-The canonical copy of the shared docs lives in [Unbound-core](https://github.com/Unbound224/Unbound-core/tree/main/docs).
+Questions and ideas: [GitHub Discussions](https://github.com/Unbound224/Unbound-stellar/discussions).
+<!-- TODO(owner): add the Telegram or Discord invite link here once it exists. -->
+
+## Maintainers
+
+| Maintainer | Role |
+|---|---|
+| [@Cjay-Cyber-2](https://github.com/Cjay-Cyber-2) | Project lead and maintainer, [Unbound224](https://github.com/Unbound224) |
+
+## Contributors
+
+<a href="https://github.com/Unbound224/Unbound-stellar/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Unbound224/Unbound-stellar" alt="Contributors" />
+</a>
 
 ## License
 
-[MIT](./LICENSE). The Unbound logo in [`brand/`](./brand) is the project's approved identity and is shared by all four
-repositories; it has not been trademark-cleared.
+[MIT](./LICENSE). The Unbound logo in [`brand/`](./brand) is the project's identity; it has not been trademark-cleared.

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Deploy the Unbound redemption-return escrow (contracts/redemption-escrow) to Stellar TESTNET.
 #
-# STATUS: written and dry-run checked (DRY_RUN=1), but NEVER RUN for real: the sandbox that wrote it has no route to
-# Stellar Testnet and no stellar-cli. Nothing in this repository claims a deployed contract id.
+# STATUS: run for real on 2026-11-04 (stellar-cli 27.1.0). The resulting contract id, wasm hash and transaction links are
+# recorded in contracts/deployments/testnet.json and docs/DEPLOYMENT.md. DRY_RUN=1 prints the plan without sending anything.
 #
 # Requirements: stellar-cli >= 25.2 (https://developers.stellar.org/docs/tools/cli), Rust with the
 # wasm32v1-none target, network access to Testnet RPC + Friendbot.
