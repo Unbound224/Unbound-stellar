@@ -52,7 +52,7 @@ describe('reconciliation event contract', () => {
     expect(() => ReconciliationEventSchema.parse({ ...good, network: 'PUBLIC' })).toThrow();
   });
   it('checked-in JSON Schema snapshot matches the zod source (regenerate with npm run schemas)', () => {
-    const onDisk = readFileSync(new URL('../schemas/reconciliation-event.v1.json', import.meta.url), 'utf8');
+    const onDisk = readFileSync(new URL('../schemas/reconciliation-event.v1.json', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
     expect(onDisk).toBe(reconciliationEventJsonSchema());
     expect(z.toJSONSchema(ReconciliationEventSchema)).toMatchObject({ type: 'object' });
   });

@@ -15,6 +15,8 @@ import { signTransaction, TestnetKeypairSigner } from '../src/settlement/signing
 import { SimulatedLedger } from '../src/testing/simulated-ledger.js';
 import { TESTNET_PASSPHRASE, type AssetRef } from '../src/types/index.js';
 import type { BuiltTx } from '../src/ledger/tx.js';
+import { SorobanRedemptionEscrow } from '../src/soroban/escrow.js';
+import { FixtureSorobanRpc } from '../src/testing/fixture-soroban-rpc.js';
 
 const kp = (label: string) => new TestnetKeypairSigner(Keypair.fromRawEd25519Seed(createHash('sha256').update(`unbound-fixture:${label}`).digest()));
 
@@ -47,6 +49,16 @@ export async function generateXdrFixtures(): Promise<Record<string, unknown>> {
   const burn = await buildRedemptionReturnTx(ledger, SHOP, user.publicKey, parseAmount('30'), { maxTime, idempotencyKey: 'fixture-redeem-1' });
   const pub = (s: TestnetKeypairSigner) => s.publicKey;
 
+  // Soroban redemption escrow invocations (ADR 0002), assembled with the real SDK over the fixture RPC.
+  const rpc = new FixtureSorobanRpc();
+  rpc.sequences.set(user.publicKey, '4100');
+  const escrowId = 'CADQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQP5KR';
+  const escrow = new SorobanRedemptionEscrow({ rpc, contractId: escrowId, registry });
+  const nowSec = Math.floor(T0 / 1000);
+  const deadline = nowSec + 7 * 86_400;
+  const open = await escrow.buildOpenReturn({ consumer: user.publicKey, asset: SHOP, amount: parseAmount('30'), redemptionId: 'red_fixture0001', deadline, nowSec });
+  const expire = await escrow.buildExpireRefund({ source: user.publicKey, redemptionId: 'red_fixture0001', nowSec: deadline });
+
   return {
     note: 'SYNTHETIC. Keys derived from public labels; never fund on any real network.',
     networkPassphrase: TESTNET_PASSPHRASE,
@@ -54,5 +66,7 @@ export async function generateXdrFixtures(): Promise<Record<string, unknown>> {
     quote,
     settlement: { xdr: settle.xdr, signedXdr: signed, hash: settle.hash },
     redemptionReturn: { xdr: burn.xdr, hash: burn.hash, asset: SHOP, amount: '30.0000000' },
+    escrowOpen: { xdr: open.xdr, hash: open.hash, contractId: escrowId, redemptionId: 'red_fixture0001', redemptionKeyHex: open.redemptionKeyHex, asset: SHOP, amount: '30.0000000', deadline },
+    escrowExpire: { xdr: expire.xdr, hash: expire.hash, contractId: escrowId, redemptionKeyHex: expire.redemptionKeyHex },
   };
 }

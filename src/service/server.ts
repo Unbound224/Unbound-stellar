@@ -12,6 +12,7 @@ import { buildSettlementTx } from '../settlement/build.js';
 import { submitSettlement, txHashOf } from '../settlement/submit.js';
 import type { AssetRef } from '../types/index.js';
 import type { PendingStore } from '../worker/pending-store.js';
+import type { BuiltSorobanTx, EscrowedReturn, RedemptionEscrow } from '../soroban/escrow.js';
 
 const MAX_BODY = 256 * 1024;
 
@@ -25,6 +26,11 @@ export interface GatewayDeps {
   /** shared service token (unbound-core -> this service) */
   token: string;
   now?: () => number;
+  /**
+   * Soroban redemption escrow (ADR 0002). Optional: without it every /gateway/v1/escrow/* call
+   * answers 422 ESCROW_UNAVAILABLE and core falls back to the native redemption-return payment.
+   */
+  escrow?: RedemptionEscrow;
 }
 
 const Asset = z.object({ code: z.string(), issuer: z.string().nullable() }).strict();
@@ -42,6 +48,12 @@ const ReturnIn = z
   .object({ asset: z.object({ code: z.string(), issuer: z.string() }).strict(), holder: z.string(), amount: z.string(), idempotencyKey: z.string().min(1).max(128) })
   .strict();
 const SubmitIn = z.object({ signedXdr: z.string().min(1).max(50_000), expectedHash: z.string().regex(/^[0-9a-f]{64}$/) }).strict();
+const RedemptionId = z.string().regex(/^[\w-]{4,128}$/);
+const EscrowOpenIn = z
+  .object({ asset: z.object({ code: z.string(), issuer: z.string() }).strict(), holder: z.string(), amount: z.string(), redemptionId: RedemptionId, deadline: z.number().int() })
+  .strict();
+const EscrowIssuerIn = z.object({ redemptionId: RedemptionId, issuer: z.string() }).strict();
+const EscrowExpireIn = z.object({ redemptionId: RedemptionId, source: z.string() }).strict();
 const TrustedIn = z.object({ assets: z.array(z.object({ code: z.string(), issuer: z.string() }).strict()).max(5000) }).strict();
 
 class HttpError extends Error {
@@ -123,6 +135,52 @@ export function createGatewayServer(deps: GatewayDeps): Server {
       const i = TrustedIn.parse(body);
       deps.registry.replaceAll(i.assets);
       return { status: 200, body: { count: deps.registry.size() } };
+    }
+    if (path.startsWith('/gateway/v1/escrow/')) return escrowRoute(method, path, body);
+    throw new HttpError(404, 'NOT_FOUND', 'route not found');
+  }
+
+  const builtBody = (b: BuiltSorobanTx) => ({ xdr: b.xdr, hash: b.hash, networkPassphrase: b.networkPassphrase, contractId: b.contractId, fn: b.fn, redemptionKeyHex: b.redemptionKeyHex });
+  const returnBody = (r: EscrowedReturn) => ({
+    consumer: r.consumer,
+    issuer: r.issuer,
+    token: r.token,
+    amount: formatAmount(r.amount),
+    deadline: r.deadline,
+    openedAt: r.openedAt,
+    status: r.status,
+    closedAt: r.closedAt,
+  });
+
+  async function escrowRoute(method: string, path: string, body: unknown): Promise<{ status: number; body: unknown }> {
+    const escrow = deps.escrow;
+    if (!escrow) throw new UnboundStellarError('ESCROW_UNAVAILABLE', 'the Soroban redemption escrow is not configured on this gateway');
+    const nowSec = Math.floor(nowMs() / 1000);
+    const watch = async (b: BuiltSorobanTx) => {
+      await deps.pending.add({ hash: b.hash, txMaxTimeSec: nowSec + 300, addedAt: new Date(nowMs()).toISOString() });
+      return { status: 200, body: builtBody(b) };
+    };
+    if (method === 'POST' && path === '/gateway/v1/escrow/open') {
+      const i = EscrowOpenIn.parse(body);
+      deps.registry.assertTrusted(i.asset);
+      return watch(await escrow.buildOpenReturn({ consumer: i.holder, asset: i.asset, amount: parseAmount(i.amount), redemptionId: i.redemptionId, deadline: i.deadline, nowSec }));
+    }
+    if (method === 'POST' && path === '/gateway/v1/escrow/confirm') {
+      const i = EscrowIssuerIn.parse(body);
+      return watch(await escrow.buildConfirm({ issuer: i.issuer, redemptionId: i.redemptionId, nowSec }));
+    }
+    if (method === 'POST' && path === '/gateway/v1/escrow/reject') {
+      const i = EscrowIssuerIn.parse(body);
+      return watch(await escrow.buildReject({ issuer: i.issuer, redemptionId: i.redemptionId, nowSec }));
+    }
+    if (method === 'POST' && path === '/gateway/v1/escrow/expire') {
+      const i = EscrowExpireIn.parse(body);
+      return watch(await escrow.buildExpireRefund({ source: i.source, redemptionId: i.redemptionId, nowSec }));
+    }
+    const ret = /^\/gateway\/v1\/escrow\/returns\/([\w-]{4,128})$/.exec(path);
+    if (method === 'GET' && ret) {
+      const r = await escrow.getReturn(ret[1]!);
+      return { status: 200, body: { contractId: escrow.contractId, return: r ? returnBody(r) : null } };
     }
     throw new HttpError(404, 'NOT_FOUND', 'route not found');
   }

@@ -1,9 +1,7 @@
 /**
- * Horizon adapters. UNVERIFIED AGAINST LIVE TESTNET: the sandbox that built this package had no
- * route to horizon-testnet.stellar.org. The pure mapping functions below are unit-tested against
- * hand-written payloads that follow the public Horizon response shape (NOT recorded responses).
- * The thin Horizon.Server wrappers are type-checked only. Run scripts/testnet-smoke.ts on a
- * networked machine before relying on them.
+ * Horizon adapters. The pure mapping functions below are unit-tested against hand-written payloads that follow the public
+ * Horizon response shape (not recorded responses). The thin Horizon.Server wrappers were exercised against live Testnet on
+ * 2026-11-04 (paths, submit, transaction lookup); the run is recorded in docs/DEPLOYMENT.md.
  */
 import { Horizon, Transaction, TransactionBuilder } from '@stellar/stellar-sdk';
 import { formatAmount, parseAmount } from '../amount.js';
@@ -75,14 +73,18 @@ export function mapPath(j: HorizonPathJson): PathCandidate {
 
 export interface HorizonTxJson {
   hash: string;
-  ledger: number;
+  /** a number in raw Horizon JSON, but a link FUNCTION on stellar-sdk call() records; the number is then `ledger_attr` */
+  ledger: number | (() => unknown);
+  ledger_attr?: number;
   successful: boolean;
   paging_token: string;
   created_at: string;
 }
 
 export function mapTx(j: HorizonTxJson): TxRecord {
-  return { hash: j.hash, ledger: j.ledger, successful: j.successful, pagingToken: j.paging_token, observedAt: j.created_at };
+  const ledger = typeof j.ledger === 'number' ? j.ledger : j.ledger_attr;
+  if (typeof ledger !== 'number') throw new Error('Horizon transaction record has no numeric ledger');
+  return { hash: j.hash, ledger, successful: j.successful, pagingToken: j.paging_token, observedAt: j.created_at };
 }
 
 interface HorizonErrorLike {

@@ -1,0 +1,91 @@
+{
+  "network": "testnet",
+  "escrow": "CC4ETHM44IUJ4GDRT57VH4OSNEMPEGUKQHQJCUQDIU2LKIAKZYIYOP6C",
+  "asset": "SHOP:GDRIDJU3VKOYAQXMI4WVEVSLFATOSOK4JAVJQMYK2D5YGIY4Z6ALYQWX",
+  "sac": "CBGICNAOTEYV4ZMZFHEWM5MD6VTV6NXLVEXLJP6R7OI7HDMESPXEYCK7",
+  "issuer": "GDRIDJU3VKOYAQXMI4WVEVSLFATOSOK4JAVJQMYK2D5YGIY4Z6ALYQWX",
+  "consumer": "GBC5IXHMZLVVNUKPS55ZZ4BHXEBYCCZBBBCKJYYYHLHOYMKWABBTV5FX",
+  "startedAt": "2026-11-04T10:55:30.798Z",
+  "steps": [
+    {
+      "name": "open_return (to be confirmed)",
+      "redemptionId": "7d92dfb8e33d905558b5e662abc14a63c43edc34f4ce5c7e384f3380acd6a515",
+      "expected": "escrow holds 10",
+      "result": "ok",
+      "txHash": "ed82231098cf13676478d8e05e5acdd08da3d20098fab30b2831d90569be0d93"
+    },
+    {
+      "name": "confirm by the issuer",
+      "expected": "escrow 0, credit with issuer",
+      "result": "ok",
+      "txHash": "8af95ad4e234b4e14721f39198d464a958900b578c8870c570eef6a8a0a51c05"
+    },
+    {
+      "name": "replay of a used redemption id",
+      "expected": "DuplicateRedemption (#6)",
+      "result": "refused",
+      "detail": "Error(Contract, #6)"
+    },
+    {
+      "name": "open_return (to be rejected)",
+      "redemptionId": "a2f4827e0c8d6f62d11498a16c7119aedb1c095d697c9f4f3cc19b636c590a34",
+      "expected": "escrow holds 7",
+      "result": "ok",
+      "txHash": "3e7340d46afba56df18895cee8aec421a3bf00bda6adc2c8bfe7ae91a5f83dcb"
+    },
+    {
+      "name": "reject by the issuer",
+      "expected": "consumer refunded, escrow 0",
+      "result": "ok",
+      "txHash": "3a05c7b222cb02752cf2fc968d2ec263c20e438a8a6069e960ad81bea4320b07"
+    },
+    {
+      "name": "open_return (wrong-signer target)",
+      "redemptionId": "ed00c056501d41656e67420931fcb7b72f3fc5f0c2f1d8c3039daa10c9a5ac3b",
+      "expected": "escrow holds 3",
+      "result": "ok",
+      "txHash": "5ca68b98413a2bdb090be80fd6cdc3d50bbb6ff25bd4ce2cbb182fa58f1ca84b"
+    },
+    {
+      "name": "confirm signed by the consumer (not the issuer)",
+      "expected": "auth failure",
+      "result": "refused",
+      "detail": "client-side: ❌ error: Missing signing key for account GDRIDJU3VKOYAQXMI4WVEVSLFATOSOK4JAVJQMYK2D5YGIY4Z6ALYQWX"
+    },
+    {
+      "name": "open_return naming a victim account, signed by the issuer",
+      "expected": "refused, victim credit untouched",
+      "result": "refused",
+      "detail": "client-side: ❌ error: Missing signing key for account GDQ3SQGSNDWSLMVCTSOC444PLJIEJUC7EQ3VARDLL56MKEX6RQMM7T2K"
+    },
+    {
+      "name": "reject (cleanup of the wrong-signer target)",
+      "expected": "escrow back to 0",
+      "result": "ok",
+      "txHash": "0134ea6a4b90f556a4e4a23c96a29e85135055956e2a45db701cbc27e6811ea2"
+    },
+    {
+      "name": "open_return (to be refunded by expiry)",
+      "redemptionId": "41e3b6bf19a991b1fba0cbd3ff6872b2133ea21164e6d2c638bf422ac300faa3",
+      "expected": "escrow holds 5 until the deadline",
+      "result": "ok",
+      "txHash": "573ee85ba2eb2e00cd0c37c9d097ee1ee256ea534ede42429eb937f5ef6202be",
+      "detail": "deadline 2026-11-04T12:03:06.000Z"
+    },
+    {
+      "name": "expire_refund before the deadline",
+      "expected": "DeadlineNotReached (#9)",
+      "result": "refused",
+      "detail": "Error(Contract, #9)"
+    },
+    {
+      "name": "expire_refund after the deadline returns the credit",
+      "expected": "consumer +5, escrow 0",
+      "result": "ok",
+      "txHash": "191ab9aceee9d05c6426024064a0d2c641bc456a6bcb3bf38b52c671d0c401a4",
+      "detail": "hash recovered from ledger 5557247 after the script aborted post-refund on a balance-check bug (fixed); get_return shows status Expired"
+    }
+  ],
+  "victim": "GDQ3SQGSNDWSLMVCTSOC444PLJIEJUC7EQ3VARDLL56MKEX6RQMM7T2K",
+  "finishedAt": "2026-11-04T16:31:37.927Z"
+}

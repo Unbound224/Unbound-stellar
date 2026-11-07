@@ -1,0 +1,74 @@
+{
+  "network": "testnet",
+  "startedAt": "2026-11-04T11:26:25.045Z",
+  "core": "http://127.0.0.1:3001",
+  "asset": "SHOP:GDRIDJU3VKOYAQXMI4WVEVSLFATOSOK4JAVJQMYK2D5YGIY4Z6ALYQWX",
+  "issuer": "GDRIDJU3VKOYAQXMI4WVEVSLFATOSOK4JAVJQMYK2D5YGIY4Z6ALYQWX",
+  "holder": "GBC5IXHMZLVVNUKPS55ZZ4BHXEBYCCZBBBCKJYYYHLHOYMKWABBTV5FX",
+  "steps": [
+    {
+      "name": "merchant registered, verified by an admin, credit program registered with an issuer-signed policy",
+      "ok": true
+    },
+    {
+      "name": "holder returns 4 SHOP into the escrow (confirm)",
+      "ok": true,
+      "redemptionId": "red_38b14c37fa3d452796dc72a2265d358f",
+      "state": "RETURN_CONFIRMED/HELD",
+      "txHashes": {
+        "returnTxHash": "0c9b01b583a68df7a6123c1439ec29fa92375eedba41ae78cc899a9727d8f0d2"
+      },
+      "note": "mode ESCROW"
+    },
+    {
+      "name": "merchant confirms; issuer-signed escrow confirm submitted",
+      "ok": true,
+      "redemptionId": "red_38b14c37fa3d452796dc72a2265d358f",
+      "state": "FULFILLED/RELEASED",
+      "txHashes": {
+        "returnTxHash": "0c9b01b583a68df7a6123c1439ec29fa92375eedba41ae78cc899a9727d8f0d2",
+        "escrow.closeTxHash": "92eab2cd492451d1e34669d8c0d97a853d806cf6f99399630ae03af29bf258fa"
+      }
+    },
+    {
+      "name": "holder returns 3 SHOP into the escrow (reject)",
+      "ok": true,
+      "redemptionId": "red_b1bf42d610f544a5aee48b30db203643",
+      "state": "RETURN_CONFIRMED/HELD",
+      "txHashes": {
+        "returnTxHash": "3beacc887d25fcf03e41ee1ff8afd1b452c99de5bdf4207ce7ad32a008301176"
+      },
+      "note": "mode ESCROW"
+    },
+    {
+      "name": "merchant rejects; credit refunded to the holder by the escrow",
+      "ok": true,
+      "redemptionId": "red_b1bf42d610f544a5aee48b30db203643",
+      "state": "REJECTED/REFUNDED",
+      "txHashes": {
+        "returnTxHash": "3beacc887d25fcf03e41ee1ff8afd1b452c99de5bdf4207ce7ad32a008301176",
+        "escrow.closeTxHash": "88a492dd8613d69bfda76dbc80bf40864c93eb7571db805cecf424640a4e9187"
+      }
+    },
+    {
+      "name": "holder returns 2 SHOP into the escrow (expiry)",
+      "ok": true,
+      "redemptionId": "red_5876db58ad2e419b8450ba110e3ae00c",
+      "state": "RETURN_CONFIRMED/HELD",
+      "txHashes": {
+        "returnTxHash": "4c44a2c7dcf42390a3da5fd9901a48e7a0691fb9eba20e04eece74ae636cabf3"
+      },
+      "note": "mode ESCROW"
+    },
+    {
+      "name": "holder claims the timeout refund after the deadline",
+      "ok": true,
+      "redemptionId": "red_5876db58ad2e419b8450ba110e3ae00c",
+      "state": "EXPIRED/EXPIRED_REFUNDED",
+      "txHashes": {
+        "returnTxHash": "4c44a2c7dcf42390a3da5fd9901a48e7a0691fb9eba20e04eece74ae636cabf3",
+        "escrow.closeTxHash": "57eef54681b43d3164e3feb9449f9f8d0154475aabbba03a59a0118101a8c4d8"
+      }
+    }
+  ]
+}

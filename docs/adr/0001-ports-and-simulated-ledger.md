@@ -17,7 +17,7 @@ violation, timeout after submit, duplicate submit) need deterministic tests.
   signature, sequence, timebounds) and applies a small subset of operations. It is not consensus.
 - Transactions are built with `@stellar/stellar-sdk` and returned UNSIGNED; signing is a separate
   step so the user's device can sign without secrets reaching any server.
-- Outcome rules follow `docs/SRD.md`: definitive rejection -> FAILED; unknown outcome -> RECONCILING;
+- Outcome rules: definitive rejection -> FAILED; unknown outcome -> RECONCILING;
   a known hash short-circuits to its recorded outcome; an expired never-included tx -> FAILED(EXPIRED).
 
 ## Consequences

@@ -1,0 +1,20 @@
+{
+  "network": "testnet",
+  "startedAt": "2026-11-04T16:55:08.171Z",
+  "sourceAsset": "SHOP:GDRIDJU3VKOYAQXMI4WVEVSLFATOSOK4JAVJQMYK2D5YGIY4Z6ALYQWX",
+  "targetAsset": "USDC:GCHGR7UN3XYKUEZJAZ74QSXAJOB7DIOGFVDS5KD3LDMNQVBO3HHOU5QF",
+  "holder": "GBC5IXHMZLVVNUKPS55ZZ4BHXEBYCCZBBBCKJYYYHLHOYMKWABBTV5FX",
+  "quote": {
+    "id": "q_29dbaf7de14d2564408e1219e10bbfb0",
+    "sourceAmount": "5.0000000",
+    "expectedDestinationAmount": "5.0000000",
+    "minDestinationAmount": "4.9500000"
+  },
+  "intent": {
+    "id": "int_aa3d19c6fd6e45d6a9b12727a3a0cb3d",
+    "state": "CONFIRMED",
+    "txHash": "5879422d5f67f3388f26f525a7cadaa9640eaa1c521fed272de3fc3dfbe775e1",
+    "ledger": 5557552,
+    "amountOutActual": null
+  }
+}

@@ -58,7 +58,7 @@ export function txHashOf(signedXdr: string, networkPassphrase: string): string {
 }
 
 /**
- * Submit and classify. Rules from docs/SRD.md:
+ * Submit and classify. Rules:
  *  - a definitive rejection is FAILED with a reason (nothing was applied);
  *  - a timeout / unknown error AFTER submission is RECONCILING, never FAILED and never retried
  *    with changed parameters;

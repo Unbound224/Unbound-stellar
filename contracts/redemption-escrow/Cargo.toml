@@ -1,0 +1,18 @@
+[package]
+name = "unbound-redemption-escrow"
+version = "0.1.0"
+description = "Unbound redemption-return escrow: holds returned merchant credit until the issuer confirms fulfilment, rejects, or the deadline passes (Testnet only, unaudited)."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+doctest = false
+
+[dependencies]
+soroban-sdk = { workspace = true }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }

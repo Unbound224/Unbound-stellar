@@ -1,0 +1,3 @@
+# soroban-sdk writes per-test ledger snapshots here; they are regenerated on every run
+redemption-escrow/test_snapshots/
+target/
