@@ -7,7 +7,7 @@ jobs:
       run:
         working-directory: contracts
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32v1-none
@@ -26,7 +26,7 @@ jobs:
           SOROBAN_SDK_BUILD_SYSTEM_SUPPORTS_SPEC_SHAKING_V2: '1'
         run: cargo build --locked --release --target wasm32v1-none
       - run: ls -l target/wasm32v1-none/release/unbound_redemption_escrow.wasm
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: unbound-redemption-escrow-wasm
           path: contracts/target/wasm32v1-none/release/unbound_redemption_escrow.wasm
@@ -34,7 +34,7 @@ jobs:
   deploy-script:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: bash -n scripts/deploy-testnet.sh
       - run: DRY_RUN=1 scripts/deploy-testnet.sh
       - run: '! STELLAR_NETWORK=mainnet scripts/deploy-testnet.sh'
